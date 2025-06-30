@@ -1,48 +1,56 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+// Kullanıcı şeması: kullanıcı bilgileri, şifre, rol, kaydedilen ilanlar vb.
 const userSchema = new mongoose.Schema({
+  // Kullanıcının adı
   name: {
     type: String,
-    required: [true, 'Please provide a name'],
+    required: [true, 'Lütfen isim girin'],
     trim: true,
   },
+  // E-posta adresi (benzersiz ve zorunlu)
   email: {
     type: String,
-    required: [true, 'Please provide an email'],
+    required: [true, 'Lütfen e-posta girin'],
     unique: true,
     lowercase: true,
     match: [
       /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-      'Please provide a valid email address',
+      'Geçerli bir e-posta adresi girin',
     ],
   },
+  // Şifre (hashlenmiş olarak tutulur)
   password: {
     type: String,
-    required: [true, 'Please provide a password'],
+    required: [true, 'Lütfen şifre girin'],
     minlength: 6,
-    select: false, // Don't send password back in responses by default
+    select: false, // Varsayılan olarak şifre response'larda gönderilmez
   },
+  // Telefon numarası
   phone: {
     type: String,
     trim: true,
   },
+  // Kullanıcı rolü (user/admin)
   role: {
     type: String,
     enum: ['user', 'admin'],
     default: 'user',
   },
+  // Kaydedilen ilanlar (Pet referansları)
   savedPets: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Pet'
   }],
+  // Oluşturulma tarihi
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
 
-// Hash password before saving
+// Şifreyi kaydetmeden önce hashle
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
@@ -52,7 +60,7 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Method to compare entered password with hashed password
+// Girilen şifreyi hashlenmiş şifreyle karşılaştıran yardımcı fonksiyon
 userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

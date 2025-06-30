@@ -4,46 +4,47 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 
-// Register route
+// Kullanıcı kayıt (register) endpointi
+// Yeni kullanıcı oluşturur, giriş için JWT token döner
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
-    // Input validation
+    // Girdi doğrulama
     if (!name || !email || !password || !phone) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide all required fields: name, email, password, and phone'
+        error: 'Lütfen tüm alanları doldurun: isim, e-posta, şifre ve telefon'
       });
     }
 
-    // Validate email format
+    // E-posta formatı kontrolü
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide a valid email address'
+        error: 'Geçerli bir e-posta adresi girin'
       });
     }
 
-    // Validate password strength
+    // Şifre uzunluğu kontrolü
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
-        error: 'Password must be at least 6 characters long'
+        error: 'Şifre en az 6 karakter olmalı'
       });
     }
 
-    // Check if user with that email already exists
+    // Aynı e-posta ile kayıtlı kullanıcı var mı kontrolü
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        error: 'This email is already registered. Please use a different email or try logging in'
+        error: 'Bu e-posta zaten kayıtlı. Lütfen farklı bir e-posta kullanın veya giriş yapın'
       });
     }
 
-    // Create new user
+    // Yeni kullanıcı oluştur
     const user = new User({
       name,
       email,
@@ -53,7 +54,7 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
-    // Generate JWT token
+    // JWT token oluştur
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET,
@@ -71,55 +72,54 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
-    
-    // Handle specific MongoDB errors
+    console.error('Kayıt hatası:', error);
+    // MongoDB doğrulama hatası
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
-        error: 'Invalid input data. Please check your information and try again'
+        error: 'Geçersiz giriş verisi. Lütfen bilgilerinizi kontrol edin.'
       });
     }
-
     res.status(500).json({
       success: false,
-      error: 'Registration failed. Please try again later'
+      error: 'Kayıt başarısız. Lütfen daha sonra tekrar deneyin.'
     });
   }
 });
 
-// Login route
+// Kullanıcı giriş (login) endpointi
+// E-posta ve şifre ile giriş yapar, JWT token döner
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Input validation
+    // Girdi doğrulama
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide both email and password'
+        error: 'Lütfen e-posta ve şifre girin'
       });
     }
 
-    // Find user by username
+    // Kullanıcıyı e-posta ile bul
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: 'No account found with this email. Please check your email or sign up'
+        error: 'Bu e-posta ile kayıtlı hesap bulunamadı. Lütfen e-posta adresinizi kontrol edin veya kayıt olun.'
       });
     }
 
-    // Check password
+    // Şifreyi kontrol et
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        error: 'Incorrect password. Please try again'
+        error: 'Şifre yanlış. Lütfen tekrar deneyin.'
       });
     }
 
-    // Generate JWT token
+    // JWT token oluştur
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET,
@@ -136,21 +136,21 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Giriş hatası:', error);
     res.status(500).json({
       success: false,
-      error: 'Login failed. Please try again later'
+      error: 'Giriş başarısız. Lütfen daha sonra tekrar deneyin.'
     });
   }
 });
 
-// Get current user
+// Giriş yapan kullanıcının bilgilerini getirir
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching user', error: error.message });
+    res.status(500).json({ message: 'Kullanıcı bilgileri getirilirken hata oluştu', error: error.message });
   }
 });
 

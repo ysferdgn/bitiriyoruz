@@ -19,16 +19,10 @@ import {
 } from '@heroicons/react/24/outline';
 
 const quickActions = [
-  { text: 'En uysal köpek türleri', category: 'genel', icon: '🐕', priority: 1 },
-  { text: 'Tavsiye edilen mama markaları', category: 'beslenme', icon: '🍖', priority: 2 },
+  { text: 'Uysal köpek türleri', category: 'genel', icon: '🐕', priority: 1 },
+  { text: 'Mama önerisi', category: 'beslenme', icon: '🍖', priority: 2 },
   { text: 'Kedi tuvalet eğitimi', category: 'egitim', icon: '🐱', priority: 3 },
-  { text: 'İlk defa evcil hayvan sahipleniyorum', category: 'sahiplenme', icon: '🏠', priority: 1 },
-  { text: 'Acil veteriner durumları', category: 'acil', icon: '🚨', priority: 1 },
-  { text: 'Kedilerde tüy dökme sorunu', category: 'saglik', icon: '🐾', priority: 2 },
-  { text: 'Köpeklerde sosyalleşme', category: 'egitim', icon: '🎾', priority: 3 },
-  { text: 'Hamster bakım rehberi', category: 'genel', icon: '🐹', priority: 3 },
-  { text: 'Kuş kafesi düzenlemesi', category: 'genel', icon: '🦜', priority: 4 },
-  { text: 'Aşı takvimi', category: 'saglik', icon: '💉', priority: 2 }
+  { text: 'Acil veteriner', category: 'acil', icon: '🚨', priority: 1 }
 ];
 
 const categoryColors = {
@@ -617,57 +611,50 @@ const AIChatWidget = ({
 
           {/* Enhanced Quick Actions with Pagination */}
           {filteredQuickActions.length > 0 && (
-            <div className={`px-4 py-3 ${themeClasses.primary} border-t ${themeClasses.border}`}>
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                <span>Hızlı Başlangıç Önerileri ({quickActionsPage + 1}/{totalPages})</span>
-                <button
-                  onClick={() => setShowFullHistory(!showFullHistory)}
-                  className="text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded"
-                >
-                  {showFullHistory ? 'Kısalt' : 'Tümünü Gör'}
-                </button>
+            <div className={`px-4 py-2 ${themeClasses.primary} border-t ${themeClasses.border}`}> 
+              <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <span>Hazır Komutlar</span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setQuickActionsPage(prev => Math.max(0, prev - 1))}
+                    disabled={quickActionsPage === 0}
+                    className={`p-1 rounded-full ${themeClasses.secondary} ${quickActionsPage === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-600'} focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+                    style={{ minWidth: 28 }}
+                  >
+                    <ArrowLeftIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setQuickActionsPage(prev => Math.min(totalPages - 1, prev + 1))}
+                    disabled={quickActionsPage === totalPages - 1}
+                    className={`p-1 rounded-full ${themeClasses.secondary} ${quickActionsPage === totalPages - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-600'} focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+                    style={{ minWidth: 28 }}
+                  >
+                    <ArrowRightIcon className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2">
-                {(showFullHistory ? quickActions : filteredQuickActions).map((action, index) => (
+              <div className="flex overflow-x-auto space-x-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 py-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db #f3f4f6', minHeight: 40 }}>
+                {filteredQuickActions.map((action, index) => (
                   <button
                     key={index}
                     onClick={() => {
                       setSelectedCategory(action.category);
                       sendMessage(action.text, action.category);
                     }}
-                    className={`flex items-center text-left text-xs px-3 py-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${categoryColors[action.category] || categoryColors.genel}`}
+                    className={`flex items-center text-xs px-2 py-1 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${categoryColors[action.category] || categoryColors.genel}`}
+                    style={{ minWidth: 80, maxWidth: 400, fontSize: '0.85rem', width: 'auto' }}
                   >
-                    <span className="mr-2">{action.icon}</span>
-                    <span className="flex-1">{action.text}</span>
+                    <span className="mr-1 text-lg">{action.icon}</span>
+                    <span className="flex-1 whitespace-normal" style={{display:'block'}}>{action.text}</span>
                   </button>
                 ))}
               </div>
-              {totalPages > 1 && !showFullHistory && (
-                <div className="flex justify-between items-center mt-3">
-                  <button
-                    onClick={() => setQuickActionsPage(prev => Math.max(0, prev - 1))}
-                    disabled={quickActionsPage === 0}
-                    className={`p-1 rounded-full ${themeClasses.secondary} ${quickActionsPage === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-600'} focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                  >
-                    <ArrowLeftIcon className="h-4 w-4" />
-                  </button>
-                  <span className="text-xs text-gray-500">{quickActionsPage + 1} / {totalPages}</span>
-                  <button
-                    onClick={() => setQuickActionsPage(prev => Math.min(totalPages - 1, prev + 1))}
-                    disabled={quickActionsPage === totalPages - 1}
-                    className={`p-1 rounded-full ${themeClasses.secondary} ${quickActionsPage === totalPages - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-600'} focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                  >
-                    <ArrowRightIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
-
           {/* Message Input and Controls */}
           <div className={`flex items-center p-4 border-t ${themeClasses.border} ${themeClasses.primary}`}>
-            <div className="relative flex-1">
+            <div className="relative flex-1 flex items-center">
               <textarea
                 ref={inputRef}
                 className={`w-full pr-10 py-2 pl-3 rounded-xl text-sm resize-none overflow-hidden h-12 ${themeClasses.input} focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 shadow-sm`}
@@ -681,12 +668,14 @@ const AIChatWidget = ({
                 }}
                 onKeyDown={handleInputKeyDown}
                 disabled={typing || connectionStatus === 'disconnected'}
+                style={{ paddingRight: 44 }}
               />
               <button
                 onClick={startVoiceRecording}
-                className={`absolute right-10 top-1/2 -translate-y-1/2 p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${!audioSupported || isRecording ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${!audioSupported || isRecording ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Sesli Mesaj"
                 disabled={!audioSupported || isRecording || typing || connectionStatus === 'disconnected'}
+                style={{ zIndex: 2 }}
               >
                 <MicrophoneIcon className={`h-5 w-5 ${isRecording ? 'text-red-500 animate-pulse' : ''}`} />
               </button>
@@ -697,7 +686,7 @@ const AIChatWidget = ({
               disabled={!input.trim() || typing || connectionStatus === 'disconnected'}
               aria-label="Mesaj Gönder"
             >
-              <PaperAirplaneIcon className="h-5 w-5 rotate-90" />
+              <PaperAirplaneIcon className="h-5 w-5" />
             </button>
           </div>
         </div>

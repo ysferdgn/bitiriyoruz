@@ -9,7 +9,7 @@ const winston = require('winston');
 
 const router = express.Router();
 
-// Logger yapılandırması
+// Winston ile gelişmiş loglama yapılandırması
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
@@ -26,13 +26,13 @@ const logger = winston.createLogger({
   ]
 });
 
-// Güvenlik middleware'leri
+// CORS ve güvenlik middleware'i
 router.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5000'],
   credentials: true
 }));
 
-// Gelişmiş rate limiting - farklı seviyeler
+// Rate limit oluşturucu (farklı seviyeler için)
 const createRateLimit = (windowMs, max, skipSuccessfulRequests = false) => {
   return rateLimit({
     windowMs,
@@ -44,7 +44,7 @@ const createRateLimit = (windowMs, max, skipSuccessfulRequests = false) => {
       return `${req.ip}-${userId}`;
     },
     handler: (req, res) => {
-      logger.warn(`Rate limit exceeded for ${req.ip}`, {
+      logger.warn(`Rate limit aşıldı: ${req.ip}`, {
         ip: req.ip,
         userId: req.user?.id,
         endpoint: req.originalUrl
@@ -62,7 +62,7 @@ const basicLimiter = createRateLimit(60 * 1000, 10); // 10/dakika
 const premiumLimiter = createRateLimit(60 * 1000, 30); // 30/dakika
 const heavyLimiter = createRateLimit(60 * 1000, 3); // Ağır işlemler için 3/dakika
 
-// Environment variables kontrolü
+// Gerekli environment değişkenlerini kontrol et
 const requiredEnvVars = ['OPENAI_API_KEY', 'JWT_SECRET'];
 for (const env of requiredEnvVars) {
   if (!process.env[env]) {
@@ -70,11 +70,9 @@ for (const env of requiredEnvVars) {
   }
 }
 
-// OpenAI setup
+// OpenAI API kurulumunu yap
 let openai;
 let isAIEnabled = false;
-
-// Sadece OPENAI_API_KEY varsa AI özelliğini etkinleştir
 if (process.env.OPENAI_API_KEY) {
   try {
     openai = new OpenAI({
@@ -82,43 +80,41 @@ if (process.env.OPENAI_API_KEY) {
       timeout: 30000 // 30 saniye timeout
     });
     isAIEnabled = true;
-    console.log('✅ OpenAI Chat is enabled.');
+    console.log('✅ OpenAI Chat etkin.');
   } catch (error) {
-    console.error('❌ OpenAI initialization failed:', error.message);
+    console.error('❌ OpenAI başlatılamadı:', error.message);
     isAIEnabled = false;
   }
 } else {
-  console.warn('⚠️  OpenAI API Key not found. AI Chat feature is disabled.');
+  console.warn('⚠️  OpenAI API Key bulunamadı. AI Chat devre dışı.');
 }
 
-// JWT middleware - kullanıcı kimlik doğrulaması
+// JWT ile kullanıcı doğrulama middleware'i
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-
   if (!token) {
     req.user = null;
     return next();
   }
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
-    logger.warn('Invalid token provided', { token: token.substring(0, 10) + '...' });
+    logger.warn('Geçersiz token gönderildi', { token: token.substring(0, 10) + '...' });
     req.user = null;
     next();
   }
 };
 
-// Input validation middleware
+// Sohbet mesajı için input doğrulama middleware'i
 const validateChatInput = [
   body('message')
     .isString()
     .trim()
     .isLength({ min: 1, max: 1000 })
-    .withMessage('Mesaj 1-1000 karakter arasında olmalıdır')
+    .withMessage('Mesaj 1-1000 karakter arasında olmalı')
     .matches(/^[a-zA-ZçÇğĞıIİöÖşŞüÜ0-9\s.,!?()-]+$/)
     .withMessage('Mesaj geçersiz karakterler içeriyor'),
   body('history')
@@ -135,19 +131,16 @@ const validateChatInput = [
 const contentFilter = async (message) => {
   const spamKeywords = ['reklam', 'para', 'kredi', 'bitcoin', 'casino'];
   const harmfulKeywords = ['zarar', 'öldür', 'zehir', 'acı çektir'];
-  
   const lowerMessage = message.toLowerCase();
-  
   for (const keyword of [...spamKeywords, ...harmfulKeywords]) {
     if (lowerMessage.includes(keyword)) {
       return { isFiltered: true, reason: 'spam_or_harmful' };
     }
   }
-  
   return { isFiltered: false };
 };
 
-// Gelişmiş sistem prompt'u - kategori bazlı
+// Sistem prompt'unu kategoriye göre döndüren fonksiyon
 const getSystemPrompt = (category) => {
   const basePrompt = `Sen evcil hayvan konusunda uzman, güvenilir ve yardımsever bir asistansın. Türkiye'deki evcil hayvan sahipleri için özel olarak tasarlandın.
 
@@ -162,7 +155,6 @@ GÖREVLER:
 - Zararlı veya tehlikeli önerilerde bulunma
 - Türkiye'deki hayvan hakları yasalarına uygun tavsiyelerde bulun
 - Kısa, öz ve anlaşılır cevaplar ver`;
-
   const categoryPrompts = {
     saglik: basePrompt + '\n\nÖZEL FOKUS: Sağlık sorunları için acil durum belirtilerini tanıt ve mutlaka veteriner hekim öner.',
     beslenme: basePrompt + '\n\nÖZEL FOKUS: Hayvan türüne özel beslenme tavsiyeleri ver, zehirli yiyecekler konusunda uyar.',
@@ -170,112 +162,62 @@ GÖREVLER:
     sahiplenme: basePrompt + '\n\nÖZEL FOKUS: Sorumlu sahiplenme, hayvanın ihtiyaçları ve yasal yükümlülükler hakkında bilgi ver.',
     acil: basePrompt + '\n\nÖZEL FOKUS: ACİL DURUM! Hemen veteriner hekim başvurusu öner, ilk yardım bilgileri ver.'
   };
-
   return categoryPrompts[category] || basePrompt;
 };
 
-// Ana chat endpoint
+// Ana AI sohbet endpointi
 router.post('/', authenticateToken, async (req, res) => {
-  // Rate limiting - kullanıcı tipine göre
+  // Kullanıcı tipine göre rate limiting uygula
   const limiter = req.user?.isPremium ? premiumLimiter : basicLimiter;
   limiter(req, res, async () => {
-    // Input validation
+    // Input doğrulama
     await Promise.all(validateChatInput.map(validation => validation.run(req)));
     const errors = validationResult(req);
-    
     if (!errors.isEmpty()) {
       return res.status(400).json({
         error: 'Geçersiz giriş verileri',
         details: errors.array()
       });
     }
-
     const { message, history = [], category = 'genel' } = req.body;
     const userId = req.user?.id || null;
     const sessionId = req.headers['x-session-id'] || crypto.randomUUID();
-
-    // Content filtering
+    // İçerik filtresi uygula
     const filterResult = await contentFilter(message);
     if (filterResult.isFiltered) {
-      logger.warn('Filtered message', { userId, message: message.substring(0, 50) });
-      return res.status(400).json({
-        error: 'Mesajınız içerik filtresi tarafından engellendi.'
-      });
+      logger.warn('Filtrelenen mesaj', { userId, message: message.substring(0, 50) });
+      return res.status(400).json({ error: 'Mesajınız sistem tarafından uygun bulunmadı.' });
     }
-
+    // AI özelliği kapalıysa hata döndür
+    if (!isAIEnabled) {
+      return res.status(503).json({ error: 'AI sohbet özelliği şu anda kullanılamıyor.' });
+    }
     try {
-      // OpenAI API çağrısı
+      // OpenAI API'ye istek hazırla
       const systemPrompt = getSystemPrompt(category);
       const messages = [
         { role: 'system', content: systemPrompt },
-        ...history.slice(-10), // Son 10 mesajı al
+        ...history.map(h => ({ role: h.role, content: h.content })),
         { role: 'user', content: message }
       ];
-
-      logger.info('OpenAI request', { 
-        userId, 
-        category, 
-        messageLength: message.length,
-        historyLength: history.length 
-      });
-
+      // OpenAI API çağrısı
       const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+        model: 'gpt-3.5-turbo',
         messages,
-        temperature: 0.7,
         max_tokens: 500,
-        presence_penalty: 0.1,
-        frequency_penalty: 0.1,
-        user: userId || sessionId // Kullanıcı takibi için
+        temperature: 0.7,
+        user: userId || undefined,
+        stream: false
       });
-
-      const aiMessage = completion.choices[0].message.content;
-      const usage = completion.usage;
-
-      // Response objesi
-      const response = {
-        text: aiMessage,
-        category,
-        sessionId,
-        usage: {
-          promptTokens: usage.prompt_tokens,
-          completionTokens: usage.completion_tokens,
-          totalTokens: usage.total_tokens
-        },
-        timestamp: new Date().toISOString()
-      };
-
-      // Başarılı response log
-      logger.info('Successful AI response', {
-        userId,
-        category,
-        tokensUsed: usage.total_tokens,
-        responseLength: aiMessage.length
-      });
-
-      res.json(response);
-
-    } catch (error) {
-      logger.error('OpenAI API error', {
-        userId,
-        error: error.message,
-        status: error.status,
-        code: error.code
-      });
-
-      // OpenAI API limitine takılırsa
-      if (error.status === 429) {
-        return res.status(429).json({
-          error: 'AI servisi geçici olarak meşgul. Lütfen birkaç saniye sonra tekrar deneyin.',
-          retryAfter: 30
-        });
-      }
-
-      // Genel hata
-      res.status(500).json({
-        error: 'AI servisi şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.',
+      // Yanıtı döndür
+      res.json({
+        response: completion.choices[0].message.content,
+        usage: completion.usage,
         sessionId
       });
+    } catch (error) {
+      logger.error('OpenAI API hatası', { error: error.message });
+      res.status(500).json({ error: 'AI yanıtı alınırken bir hata oluştu.' });
     }
   });
 });

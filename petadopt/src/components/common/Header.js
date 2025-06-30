@@ -3,6 +3,7 @@ import { FaPaw, FaMoon, FaSun } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 
+// Uygulamanın üst kısmında yer alan başlık ve tema değiştirici bileşeni
 const Header = () => {
   const { theme, toggleTheme } = useTheme();
   return (

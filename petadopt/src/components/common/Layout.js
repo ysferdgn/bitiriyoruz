@@ -8,11 +8,14 @@ import {
 import Header from './Header';
 import AIChatWidget from '../AIChatWidget';
 import api from '../../utils/axios';
+import Modal from 'react-modal';
 
+// Sol menü (sidebar) bileşeni: Navigasyon ve çıkış işlemleri
 const Sidebar = ({ isExpanded, toggleSidebar }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [hasUnread, setHasUnread] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -34,11 +37,24 @@ const Sidebar = ({ isExpanded, toggleSidebar }) => {
     fetchUnread();
   }, [user]);
 
+  // Çıkış işlemini başlatır
   const handleLogout = () => {
-    logout();
-    navigate('/');
+    setShowLogoutModal(true);
   };
 
+  // Çıkışı onaylar
+  const confirmLogout = () => {
+    logout();
+    navigate('/');
+    setShowLogoutModal(false);
+  };
+
+  // Çıkışı iptal eder
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
+  };
+
+  // Menüdeki navigasyon elemanları
   const navItems = user 
     ? [
         { icon: <FaHome />, text: 'Ana Sayfa', path: '/' },
@@ -92,13 +108,35 @@ const Sidebar = ({ isExpanded, toggleSidebar }) => {
           )}
         </ul>
       </nav>
+      <Modal
+        isOpen={showLogoutModal}
+        onRequestClose={cancelLogout}
+        className="fixed inset-0 flex items-center justify-center z-50 outline-none"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-40 z-40"
+        ariaHideApp={false}
+      >
+        <div className="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full text-center">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Çıkış Yap
+          </h2>
+          <p className="text-gray-700 mb-6">
+            Çıkış yapmak istediğinize emin misiniz?
+          </p>
+          <div className="flex justify-center gap-4">
+            <button onClick={confirmLogout} className="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition">Evet</button>
+            <button onClick={cancelLogout} className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition">Hayır</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
 
+// Sayfa düzeni bileşeni: Sidebar, üst menü ve ana içerik
 const Layout = ({ children }) => {
   const [isSidebarExpanded, setSidebarExpanded] = useState(false);
 
+  // Sidebar'ı aç/kapat
   const toggleSidebar = () => {
     setSidebarExpanded(!isSidebarExpanded);
   };

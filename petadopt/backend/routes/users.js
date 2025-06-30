@@ -4,7 +4,8 @@ const User = require('../models/User');
 const Pet = require('../models/Pet');
 const { auth, adminAuth } = require('../middleware/auth');
 
-// Get user profile
+// Kullanıcı profilini getirir
+// Giriş yapan kullanıcının profil bilgilerini ve kaydedilen ilanlarını döner
 router.get('/profile', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
@@ -12,129 +13,111 @@ router.get('/profile', auth, async (req, res) => {
       .populate('savedPets');
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching profile', error: error.message });
+    res.status(500).json({ message: 'Profil bilgileri getirilirken hata oluştu', error: error.message });
   }
 });
 
-// Update user profile
+// Kullanıcı profilini günceller
+// İsim, e-posta, telefon ve şifre değişikliği yapılabilir
 router.put('/profile', auth, async (req, res) => {
   try {
     const { name, email, phone, currentPassword, newPassword } = req.body;
-
     const user = await User.findById(req.user._id);
-
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
     }
-
-    // Update basic info
+    // Temel bilgileri güncelle
     if (name) user.name = name;
     if (email) user.email = email;
     if (phone) user.phone = phone;
-
-    // Update password if requested
+    // Şifre değişikliği isteniyorsa kontrol et
     if (newPassword) {
       if (!currentPassword) {
-        return res.status(400).json({ message: 'Current password is required to change password' });
+        return res.status(400).json({ message: 'Şifre değiştirmek için mevcut şifre gerekli' });
       }
-
       const isMatch = await user.comparePassword(currentPassword);
       if (!isMatch) {
-        return res.status(400).json({ message: 'Incorrect current password' });
+        return res.status(400).json({ message: 'Mevcut şifre yanlış' });
       }
-
       user.password = newPassword;
     }
-
     const updatedUser = await user.save();
-    
-    // Populate the savedPets field before sending the response
+    // Kaydedilen ilanları da doldur
     await updatedUser.populate('savedPets');
-
-    // Don't send back the password
+    // Şifreyi response'dan çıkar
     updatedUser.password = undefined;
-
     res.json(updatedUser);
   } catch (error) {
-    console.error('Profile update error:', error);
-    if (error.code === 11000) { // Handle duplicate email error
-        return res.status(400).json({ message: 'This email is already in use.' });
+    console.error('Profil güncelleme hatası:', error);
+    if (error.code === 11000) { // E-posta çakışma hatası
+        return res.status(400).json({ message: 'Bu e-posta zaten kullanımda.' });
     }
-    res.status(500).json({ message: 'Error updating profile', error: error.message });
+    res.status(500).json({ message: 'Profil güncellenirken hata oluştu', error: error.message });
   }
 });
 
-// Get user's pets
+// Kullanıcının kendi ilanlarını getirir
 router.get('/pets', auth, async (req, res) => {
   try {
     const pets = await Pet.find({ owner: req.user._id })
       .sort({ createdAt: -1 });
     res.json(pets);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching pets', error: error.message });
+    res.status(500).json({ message: 'Kullanıcı ilanları getirilirken hata oluştu', error: error.message });
   }
 });
 
-// Toggle a pet in user's saved list
+// Kullanıcının kaydedilen ilanlarını ekler/çıkarır (toggle)
 router.post('/saved-pets/:petId', auth, async (req, res) => {
   try {
     const petId = req.params.petId;
     const user = await User.findById(req.user._id);
-
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
     }
-
+    // Eğer zaten kaydedildiyse çıkar, değilse ekle
     const petIndex = user.savedPets.indexOf(petId);
-
     if (petIndex > -1) {
-      // It's saved, so remove it
+      // Kayıtlıysa çıkar
       user.savedPets.splice(petIndex, 1);
     } else {
-      // It's not saved, so add it
+      // Kayıtlı değilse ekle
       user.savedPets.push(petId);
     }
-
     await user.save();
-    
-    // Populate the savedPets field before sending the response back
+    // Kaydedilen ilanları doldur
     await user.populate('savedPets');
-
     res.json(user.savedPets);
   } catch (error) {
-    console.error('Error toggling saved pet:', error);
-    res.status(500).json({ message: 'Error updating saved pets', error: error.message });
+    console.error('Kaydedilen ilan güncelleme hatası:', error);
+    res.status(500).json({ message: 'Kaydedilen ilanlar güncellenirken hata oluştu', error: error.message });
   }
 });
 
-// Admin: Get all users
+// Admin: Tüm kullanıcıları getirir
 router.get('/', adminAuth, async (req, res) => {
   try {
     const users = await User.find().select('-password');
     res.json(users);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching users', error: error.message });
+    res.status(500).json({ message: 'Kullanıcılar getirilirken hata oluştu', error: error.message });
   }
 });
 
-// Admin: Delete user
+// Admin: Kullanıcıyı siler (ve tüm ilanlarını da siler)
 router.delete('/:id', adminAuth, async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-    
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
     }
-
-    // Delete all pets owned by the user
+    // Kullanıcıya ait tüm ilanları sil
     await Pet.deleteMany({ owner: user._id });
-    
-    // Delete the user
+    // Kullanıcıyı sil
     await user.deleteOne();
-    
-    res.json({ message: 'User and associated pets deleted successfully' });
+    res.json({ message: 'Kullanıcı ve ilanları başarıyla silindi' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting user', error: error.message });
+    res.status(500).json({ message: 'Kullanıcı silinirken hata oluştu', error: error.message });
   }
 });
 

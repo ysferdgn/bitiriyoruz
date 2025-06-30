@@ -4,7 +4,8 @@ import { FaHeart, FaShare, FaPhone, FaEnvelope, FaMapMarkerAlt, FaArrowLeft, FaC
 import axios from '../utils/axios';
 import { useAuth } from '../context/AuthContext';
 
-// Türkçe: Boyut bilgisini Türkçeye çeviren yardımcı fonksiyon
+// Boyut bilgisini Türkçeye çeviren yardımcı fonksiyon
+// size: İngilizce boyut (Small, Medium, Large)
 const translateSize = (size) => {
   switch (size) {
     case 'Small':
@@ -18,65 +19,65 @@ const translateSize = (size) => {
   }
 };
 
+// Hayvan detay sayfası bileşeni
+// Seçilen hayvanın detaylarını, iletişim ve benzer ilanları gösterir
 const PetDetail = () => {
-  // Türkçe: URL'den 'id' parametresini ve navigasyon fonksiyonunu al
+  // URL'den 'id' parametresini alır
   const { id } = useParams();
+  // Sayfa yönlendirme fonksiyonu
   const navigate = useNavigate();
-  // Türkçe: Mevcut kullanıcı bilgisini AuthContext'ten al
+  // Kullanıcı bilgisi (giriş yapmışsa)
   const { user } = useAuth();
-  // Türkçe: Bileşenin durumlarını (state) tanımla
-  const [pet, setPet] = useState(null); // Hayvan verisi
-  const [loading, setLoading] = useState(true); // Yüklenme durumu
-  const [error, setError] = useState(null); // Hata durumu
-  const [sendingMessage, setSendingMessage] = useState(false); // Mesaj gönderim durumu
-  const [relatedPets, setRelatedPets] = useState([]); // İlgili hayvanlar
+  // Hayvan verisi (API'den çekilen)
+  const [pet, setPet] = useState(null);
+  // Sayfa yüklenme durumu
+  const [loading, setLoading] = useState(true);
+  // Hata mesajı
+  const [error, setError] = useState(null);
+  // Mesaj gönderme işlemi yüklenme durumu
+  const [sendingMessage, setSendingMessage] = useState(false);
+  // Benzer hayvan ilanları
+  const [relatedPets, setRelatedPets] = useState([]);
 
-  // Türkçe: Bileşen yüklendiğinde veya 'id' değiştiğinde hayvan detaylarını çek
+  // Sayfa yüklendiğinde veya id değiştiğinde hayvan detaylarını ve ilgili ilanları çeker
   useEffect(() => {
-    // Türkçe: API'den hayvan detaylarını ve ilgili hayvanları çeken asenkron fonksiyon
+    // API'den hayvan detaylarını ve ilgili hayvanları çeken asenkron fonksiyon
     const fetchPetData = async () => {
-      setLoading(true);
+      setLoading(true); // Yüklenme başlatılır
       try {
         // Ana hayvan detayını çek
         const petResponse = await axios.get(`/api/pets/${id}`);
         setPet(petResponse.data);
-
         // İlgili hayvanları çek
         const relatedResponse = await axios.get(`/api/pets/related/${id}`);
         setRelatedPets(relatedResponse.data);
-        
-        setLoading(false);
+        setLoading(false); // Yüklenme bitti
       } catch (err) {
-        setError('Hayvan detayları yüklenemedi.');
+        setError('Hayvan detayları yüklenemedi.'); // Hata mesajı göster
         setLoading(false);
       }
     };
-
     fetchPetData();
   }, [id]);
 
-  // Türkçe: Mesaj gönder butonuna tıklandığında çalışacak fonksiyon
+  // Mesaj gönder butonuna tıklandığında çalışır
+  // Kullanıcı giriş yapmamışsa veya kendi ilanına mesaj göndermeye çalışıyorsa uyarı verir
   const handleSendMessage = async () => {
-    // Türkçe: Kullanıcı giriş yapmamışsa uyar
     if (!user) {
       alert('Mesaj göndermek için giriş yapmalısınız');
       return;
     }
-
-    // Türkçe: Kullanıcı kendi ilanına mesaj gönderemez
     if (user.id === pet.owner._id) {
       alert('Kendi hayvanınıza mesaj gönderemezsiniz');
       return;
     }
-
     setSendingMessage(true);
     try {
-      // Türkçe: Yeni bir konuşma oluştur veya mevcut konuşmayı al
+      // Yeni bir konuşma oluştur veya mevcut konuşmayı al
       const response = await axios.post('/api/conversations', {
         otherUserId: pet.owner._id
       });
-
-      // Türkçe: Konuşma ID'si ile mesajlar sayfasına yönlendir
+      // Mesajlar sayfasına yönlendir
       navigate(`/messages?conversation=${response.data._id}`);
     } catch (err) {
       console.error('Konuşma oluşturulurken hata:', err);
@@ -86,7 +87,7 @@ const PetDetail = () => {
     }
   };
 
-  // Türkçe: Veri yükleniyorsa yüklenme animasyonu göster
+  // Sayfa yükleniyorsa yüklenme animasyonu göster
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -95,7 +96,7 @@ const PetDetail = () => {
     );
   }
 
-  // Türkçe: Hata oluştuysa hata mesajı göster
+  // Hata oluştuysa hata mesajı göster
   if (error) {
     return (
       <div className="text-center py-12">
@@ -110,15 +111,15 @@ const PetDetail = () => {
     );
   }
 
-  // Türkçe: Hayvan verisi yoksa hiçbir şey gösterme
+  // Hayvan verisi yoksa hiçbir şey gösterme
   if (!pet) {
     return null;
   }
 
-  // Türkçe: Ana bileşen arayüzü
+  // Hayvan detay sayfası arayüzü
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Türkçe: Geri Dön Butonu */}
+      {/* Geri Dön Butonu */}
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 mb-6 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
@@ -128,9 +129,10 @@ const PetDetail = () => {
         Geri
       </button>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Türkçe: Hayvan Resimleri */}
+        {/* Hayvan Resimleri */}
         <div className="space-y-4">
           <div className="aspect-w-4 aspect-h-3 rounded-lg overflow-hidden">
+            {/* Ana resim */}
             <img
               src={pet.images[0]}
               alt={pet.name}
@@ -138,6 +140,7 @@ const PetDetail = () => {
             />
           </div>
           <div className="grid grid-cols-4 gap-4">
+            {/* Diğer resimler */}
             {pet.images.slice(1).map((image, index) => (
               <div key={index} className="aspect-w-1 aspect-h-1 rounded-lg overflow-hidden">
                 <img
@@ -150,7 +153,7 @@ const PetDetail = () => {
           </div>
         </div>
 
-        {/* Türkçe: Hayvan Bilgileri */}
+        {/* Hayvan Bilgileri ve İletişim */}
         <div className="space-y-6">
           <div className="flex justify-between items-start">
             <div>
@@ -158,10 +161,11 @@ const PetDetail = () => {
               <p className="text-gray-800">{pet.breed}</p>
             </div>
             <div className="flex gap-4">
-              <button className="text-gray-700 hover:text-[#4CAF50]">
+              {/* Beğen ve Paylaş butonları (şu an işlevsiz) */}
+              <button className="text-gray-700 hover:text-[#4CAF50]" title="Beğen">
                 <FaHeart />
               </button>
-              <button className="text-gray-700 hover:text-[#4CAF50]">
+              <button className="text-gray-700 hover:text-[#4CAF50]" title="Paylaş">
                 <FaShare />
               </button>
             </div>
@@ -191,7 +195,7 @@ const PetDetail = () => {
             </div>
           </div>
 
-          {/* Türkçe: Sahip İletişim Bilgileri */}
+          {/* Sahip İletişim Bilgileri ve Mesaj Gönder */}
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-xl font-semibold mb-4">Sahibiyle İletişime Geç</h2>
             <div className="space-y-4">
@@ -203,48 +207,36 @@ const PetDetail = () => {
                 <FaEnvelope className="text-[#4CAF50]" />
                 <span className="font-medium text-gray-900">{pet.owner.email}</span>
               </div>
-            </div>
-            <div className="mt-6 space-y-3">
-              <button className="w-full px-6 py-3 bg-[#4CAF50] text-white rounded-md hover:bg-[#388E3C]">
-                Sahibiyle İletişime Geç
+              {/* Mesaj gönder butonu */}
+              <button
+                onClick={handleSendMessage}
+                disabled={sendingMessage}
+                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                <FaComments /> {sendingMessage ? 'Mesaj gönderiliyor...' : 'Mesaj Gönder'}
               </button>
-              {user && user.id !== pet.owner._id && (
-                <button 
-                  onClick={handleSendMessage}
-                  disabled={sendingMessage}
-                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <FaComments />
-                  {sendingMessage ? 'Gönderiliyor...' : 'Mesaj Gönder'}
-                </button>
-              )}
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Türkçe: İlgili İlanlar Bölümü */}
+
+      {/* Benzer İlanlar */}
       {relatedPets.length > 0 && (
-        <div className="mt-16">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">İlginizi Çekebilecek Diğer İlanlar</h3>
-          <div className="flex overflow-x-auto space-x-6 pb-4">
-            {relatedPets.map((relatedPet) => (
-              <Link to={`/pets/${relatedPet._id}`} key={relatedPet._id} className="block flex-shrink-0 w-64">
-                <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105 h-full">
-                  <div className="h-40">
-                    <img
-                      src={relatedPet.images[0] || '/placeholder-pet.jpg'}
-                      alt={relatedPet.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Benzer İlanlar</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {/* Her bir benzer ilan kartı */}
+            {relatedPets.map(relatedPet => (
+              <Link key={relatedPet._id} to={`/pets/${relatedPet._id}`}>
+                <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-300">
+                  <img
+                    src={relatedPet.images[0] || '/placeholder-pet.jpg'}
+                    alt={relatedPet.name}
+                    className="w-full h-40 object-cover"
+                  />
                   <div className="p-4">
-                    <h4 className="text-lg font-bold text-gray-900 truncate">{relatedPet.name}</h4>
-                    <p className="text-gray-700 text-sm">{relatedPet.breed}</p>
-                    <div className="flex items-center text-gray-700 mt-2 text-sm">
-                      <FaMapMarkerAlt className="mr-2 text-sm text-[#4CAF50]" />
-                      <span>{relatedPet.location}</span>
-                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{relatedPet.name}</h3>
+                    <p className="text-gray-700">{relatedPet.breed}</p>
                   </div>
                 </div>
               </Link>

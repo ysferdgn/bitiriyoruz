@@ -13,35 +13,37 @@ const userRoutes = require('./routes/users');
 const aiChatRoutes = require('./routes/aiChat');
 const conversationRoutes = require('./routes/conversations');
 
-// Create Express app
+// Express uygulamasını oluştur
 const app = express();
 
 console.log('🚀 Backend server is starting...');
 
-// Create uploads directory if it doesn't exist
+// uploads klasörü yoksa oluştur (resim yüklemeleri için)
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
   console.log('📁 Created uploads directory');
 }
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Temel middleware'ler
+app.use(cors()); // CORS desteği
+app.use(express.json()); // JSON gövde desteği
+app.use(express.urlencoded({ extended: true })); // URL-encoded gövde desteği
 
-// Add request logging middleware
+// İstek loglama middleware'i
 app.use((req, res, next) => {
+  // Her isteği zaman, metod ve URL ile logla
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
-// Serve static files from uploads directory
+// uploads klasörünü statik olarak sun
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Connect to MongoDB Atlas
+// MongoDB bağlantı adresini al
 const MONGODB_URI = process.env.MONGO_URI;
 
+// Bağlantı adresi yoksa uygulamayı durdur
 if (!MONGODB_URI) {
   console.error('FATAL ERROR: MONGO_URI is not defined in .env file');
   process.exit(1);
@@ -49,6 +51,7 @@ if (!MONGODB_URI) {
 
 console.log('🔌 Connecting to MongoDB Atlas...');
 
+// MongoDB Atlas'a bağlan
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -63,41 +66,42 @@ mongoose.connect(MONGODB_URI, {
   process.exit(1);
 });
 
-// Add mongoose debug logging
+// Mongoose sorgularını logla (debug amaçlı)
 mongoose.set('debug', true);
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/pets', petRoutes);
-app.use('/api/ai', aiChatRoutes);
-app.use('/api/conversations', conversationRoutes);
+// API route'larını tanımla
+app.use('/api/auth', authRoutes); // Kimlik doğrulama
+app.use('/api/users', userRoutes); // Kullanıcı işlemleri
+app.use('/api/pets', petRoutes); // Hayvan işlemleri
+app.use('/api/ai', aiChatRoutes); // AI sohbet
+app.use('/api/conversations', conversationRoutes); // Mesajlaşma
 
 console.log('📡 API Routes loaded successfully');
 
-// Error handling middleware
+// Hata yakalama middleware'i
 app.use((err, req, res, next) => {
+  // Sunucu hatalarını logla ve standart bir hata mesajı döndür
   console.error('❌ Error:', err);
   res.status(500).json({ 
     success: false, 
-    error: 'Something went wrong!',
+    error: 'Bir hata oluştu!',
     details: err.message 
   });
 });
 
-// Handle 404 routes
+// 404 - Bulunamayan route'lar için middleware
 app.use((req, res) => {
   console.log('⚠️  404 - Route not found:', req.url);
   res.status(404).json({ message: 'Route not found' });
 });
 
-// Start server
+// Sunucuyu başlat
 const PORT = process.env.PORT || 5000;
 
-// 3. Socket.IO için http sunucusu oluştur
+// Socket.IO için http sunucusu oluştur
 const server = http.createServer(app); 
 
-// 4. Socket.IO sunucusunu başlat ve CORS ayarlarını yap
+// Socket.IO sunucusunu başlat ve CORS ayarlarını yap
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:5001", // React app'in adresi
@@ -105,7 +109,7 @@ const io = new Server(server, {
   }
 });
 
-// 5. Bir kullanıcı bağlandığında çalışacak kod
+// WebSocket bağlantılarını dinle
 io.on("connection", (socket) => {
   console.log(`🔌 WebSocket: User connected - ${socket.id}`);
 
@@ -114,10 +118,11 @@ io.on("connection", (socket) => {
   });
 });
 
+// Sunucuyu dinlemeye başla
 server.listen(PORT, () => {
   console.log('🎉 Server is running successfully!');
   console.log('📍 Port:', PORT);
   console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
   console.log('🔗 API Base URL: http://localhost:' + PORT);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }); 

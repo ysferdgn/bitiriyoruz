@@ -5,30 +5,36 @@ import { FaPaw, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhone, FaHome 
 import './HomePage.css';
 import PetCard from './components/PetCard';
 
+// Ana sayfa bileşeni: Tüm sahiplendirme ilanlarını listeler
+// Kullanıcıya tüm ilanları ve temel açıklamaları gösterir
 const HomePage = () => {
+  // İlanlar state'i (API'den çekilen)
   const [pets, setPets] = useState([]);
+  // Sayfa yüklenme durumu
   const [loading, setLoading] = useState(true);
 
+  // Sayfa yüklendiğinde tüm ilanları çeker
   useEffect(() => {
+    // API'den tüm ilanları çeken asenkron fonksiyon
     const fetchAllPets = async () => {
       try {
-        setLoading(true);
+        setLoading(true); // Yüklenme başlatılır
         // /search rotasına (filtresiz) istek atarak tüm ilanları çek
         const response = await axios.get('/api/pets/search');
-        setPets(response.data || []);
+        setPets(response.data || []); // Sonuçları state'e ata
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Veri alınırken hata oluştu:', error); // Hata logla
       } finally {
-        setLoading(false);
+        setLoading(false); // Yüklenme bitti
       }
     };
-
     fetchAllPets();
   }, []);
 
+  // Ana sayfa arayüzü
   return (
     <div className="home-page">
-      {/* Page Title */}
+      {/* Sayfa Başlığı */}
       <div className="mb-8">
         <div className="flex items-center gap-4">
           <FaHome className="text-4xl text-gray-500 dark:text-gray-400" />
@@ -39,11 +45,12 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* All Ads Section */}
+      {/* Tüm İlanlar Bölümü */}
       <section>
         <div className="mx-auto">
+          {/* Yükleniyorsa yükleniyor mesajı, değilse ilanlar listesi */}
           {loading ? (
-            <div className="text-center dark:text-gray-300">Loading...</div>
+            <div className="text-center dark:text-gray-300">Yükleniyor...</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
               {pets.map(pet => (

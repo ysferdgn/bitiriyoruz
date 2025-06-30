@@ -17,7 +17,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is stored in localStorage
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
     
@@ -27,8 +26,18 @@ export const AuthProvider = ({ children }) => {
       if (parsedUser.savedPets) {
         setSavedPets(parsedUser.savedPets);
       }
+      // Backend'den güncel user'ı çek
+      api.get('/users/profile').then(res => {
+        setUser(res.data);
+        setSavedPets(res.data.savedPets || []);
+        localStorage.setItem('user', JSON.stringify(res.data));
+        setLoading(false);
+      }).catch(() => {
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const updateUserInContext = (userData) => {

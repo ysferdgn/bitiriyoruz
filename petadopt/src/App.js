@@ -27,12 +27,12 @@ import Contact from './components/Contact';
 import FAQ from './components/FAQ';
 import MessagesPage from './components/MessagesPage';
 
-// Protected Route Component
+// Korumalı Route Bileşeni: Giriş yapılmamışsa yönlendirir
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div>Yükleniyor...</div>;
   }
 
   if (!user) {
@@ -42,6 +42,7 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Uygulamanın ana bileşeni
 function App() {
   return (
     <ThemeProvider>
@@ -50,7 +51,7 @@ function App() {
           <Router>
             <Layout>
               <Routes>
-                {/* Public Routes */}
+                {/* Herkese Açık Rotalar */}
                 <Route path="/" element={<HomePage />} />
                 <Route path="/signin" element={<SignIn />} />
                 <Route path="/signup" element={<SignUp />} />
@@ -69,7 +70,7 @@ function App() {
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/faq" element={<FAQ />} />
 
-                {/* Protected Routes */}
+                {/* Giriş Zorunlu Rotalar */}
                 <Route
                   path="/profile"
                   element={
